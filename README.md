@@ -1,96 +1,145 @@
 # ServidorModeloPrediccion
 
-## Descripción
+## Descripción del Proyecto
 
-Este proyecto es una aplicación web completa que incluye un backend basado en FastAPI y un frontend basado en React. La aplicación permite realizar predicciones utilizando un modelo de machine learning.
+API REST Full-Stack para predecir niveles de estrés académico en estudiantes. El sistema consume un modelo de RandomForest entrenado con scikit-learn y lo expone a través de una interfaz web.
 
 ## Arquitectura
 
-La arquitectura del proyecto se compone de los siguientes componentes:
+```
+ServidorModeloPrediccion/
+├── models/
+│   ├── modelo_final.pkl      # RandomForestClassifier entrenado
+│   └── scaler.pkl            # StandardScaler para preprocesamiento
+├── app/
+│   ├── backend/
+│   │   ├── main.py           # FastAPI app
+│   │   └── requirements.txt # Dependencias Python
+│   └── frontend/
+│       ├── src/
+│       │   ├── App.tsx       # Componente principal React
+│       │   └── components/
+│       │       └── MetricsDashboard.tsx
+│       └── package.json      # Dependencias Node
+├── Dockerfile.backend       # Contenedor Python
+├── Dockerfile.frontend      # Contenedor Node + Nginx
+├── docker-compose.yml       # Orquestación servicios
+└── nginx.conf               # Reverse proxy
+```
 
-### Backend
+## Stack Tecnológico
 
-- **Tecnologías**: FastAPI, Uvicorn, Pydantic, NumPy
-- **Estructura**:
-  - `main.py`: Punto de entrada de la aplicación FastAPI.
-  - `requirements.txt`: Lista de dependencias del backend.
+| Capa | Tecnología |
+|------|------------|
+| Backend | FastAPI + Uvicorn + Pydantic |
+| ML | scikit-learn 1.9.0 + joblib + pandas + numpy |
+| Frontend | React 18 + TypeScript + Vite + Tailwind CSS |
+| Visualización | Recharts 3.x |
+| Contenedores | Docker + Docker Compose |
+| Servidor Web | Nginx |
 
-### Frontend
+## Modelo de ML
 
-- **Tecnologías**: React, Vite, Tailwind CSS
-- **Estructura**:
-  - `App.jsx`: Componente principal de la aplicación React.
-  - `package.json`: Lista de dependencias del frontend.
+### Features de Entrada (8 campos)
 
-### Docker
+| Campo | Tipo | Rango | Descripción |
+|-------|------|-------|-------------|
+| Sleep_Hours | float | 0-24 | Horas de sueño al día |
+| Study_Hours | float | 0-24 | Horas de estudio al día |
+| Social_Media_Hours | float | 0-24 | Horas en redes sociales |
+| Attendance | float | 0-100 | Asistencia (%) |
+| Exam_Pressure | float | 1-10 | Presión de exámenes |
+| Family_Support | float | 1-10 | Apoyo familiar |
+| Month | int | 1-12 | Mes del año |
+| Student_Type | string | - | Tipo: "college", "school", "working_student" |
 
-- **Dockerfile**: Configuración para construir la imagen del backend.
-- **Dockerfile.frontend**: Configuración para construir la imagen del frontend.
-- **docker-compose.yml**: Configuración para orquestar los servicios del backend y frontend.
-- **nginx.conf**: Configuración del servidor Nginx para servir el frontend y proxy las solicitudes al backend.
+### Preprocesamiento
 
-## Configuración del Entorno
+1. **Escalado**: Study_Hours y Sleep_Hours se escalan con StandardScaler
+2. **One-Hot Encoding**: Student_Type se convierte a 3 variables binarias
+
+### Features Finales (10 columnas)
+
+```
+['Sleep_Hours', 'Study_Hours', 'Social_Media_Hours', 'Attendance', 
+ 'Exam_Pressure', 'Family_Support', 'Month', 'student_type_college', 
+ 'student_type_school', 'student_type_working_student']
+```
+
+### Predicción
+
+- **Output**: Entero (0 = Bajo Estrés/Sin Estrés, 1 = Alto Estrés)
+
+## Endpoints del Backend
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/` | Health-check |
+| POST | `/predict` | Predicción con validación Pydantic |
+| GET | `/metrics` | Métricas del modelo (hardcodeadas) |
+
+## Ejemplo de Request
+
+```json
+POST /predict
+{
+  "Sleep_Hours": 7.0,
+  "Study_Hours": 4.0,
+  "Social_Media_Hours": 2.0,
+  "Attendance": 85.0,
+  "Exam_Pressure": 6.0,
+  "Family_Support": 7.0,
+  "Month": 6,
+  "Student_Type": "college"
+}
+```
+
+## Configuración y Ejecución
 
 ### Requisitos Previos
 
 - Docker
 - Docker Compose
+- pnpm (para desarrollo local del frontend)
 
-### Instalación
+### Desarrollo Local
 
-1. Clona el repositorio:
-   ```sh
-   git clone <repository-url>
-   cd ServidorModeloPrediccion
-   ```
+```bash
+# Frontend
+cd app/frontend
+pnpm install
+pnpm dev
 
-2. Construye y levanta los contenedores:
-   ```sh
-   docker-compose up --build
-   ```
-
-### Uso
-
-1. Accede a la aplicación en tu navegador:
-   ```sh
-   http://localhost:80
-   ```
-
-2. Haz clic en el botón "Predecir" para obtener una predicción basada en los datos proporcionados.
-
-## Endpoints del Backend
-
-- `GET /`: Verifica que el backend esté funcionando.
-- `POST /predict`: Realiza una predicción basada en los datos proporcionados.
-
-## Estructura del Proyecto
-
-```
-ServidorModeloPrediccion/
-├── app/
-│   ├── backend/
-│   │   ├── main.py
-│   │   └── requirements.txt
-│   └── frontend/
-│       ├── src/
-│       │   └── App.jsx
-│       └── package.json
-├── Dockerfile
-├── Dockerfile.frontend
-├── docker-compose.yml
-└── nginx.conf
+# Backend
+cd app/backend
+pip install -r requirements.txt
+uvicorn main:app --reload
 ```
 
-## Contribución
+### Producción (Docker)
 
-Si deseas contribuir a este proyecto, por favor sigue estos pasos:
+```bash
+docker-compose up --build
+```
 
-1. Haz un fork del repositorio.
-2. Crea una nueva rama (`git checkout -b feature/nueva-caracteristica`).
-3. Realiza tus cambios y haz commit (`git commit -am 'Agrega nueva característica'`).
-4. Sube tus cambios (`git push origin feature/nueva-caracteristica`).
-5. Abre un Pull Request.
+Acceso: `http://localhost:80`
 
-## Licencia
+## Puertos Expuestos
 
-Este proyecto está licenciado bajo la Licencia MIT.
+| Servicio | Puerto |
+|----------|--------|
+| Frontend (Nginx) | 80 |
+| Backend (FastAPI) | 8000 |
+
+## Variables de Entorno
+
+| Variable | Descripción |
+|-----------|-------------|
+| PYTHONUNBUFFERED=1 | Salida de logs en tiempo real |
+
+## Notas
+
+- El modelo y scaler se cargan en memoria al iniciar FastAPI
+- El directorio `models/` se monta como volumen en el contenedor backend
+- Nginx actúa como reverse proxy: `/api/*` → backend:8000
+- Los logs de depuración del endpoint `/predict` muestran el payload, valores escalados y DataFrame final
