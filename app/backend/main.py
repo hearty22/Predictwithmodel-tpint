@@ -168,11 +168,11 @@ def predict(datos: DatosEntrada) -> PrediccionResponse:
 def get_metrics():
     """Métricas hardcodeadas del modelo."""
     return {
-        "accuracy": 0.87,
-        "f1_score": 0.85,
-        "precision": 0.88,
-        "recall": 0.84,
-        "support": 1000,
+        "accuracy": 0.81,
+        "f1_score": 0.78,
+        "precision": 0.78,
+        "recall": 0.79,
+        "support": 3362,
     }
 
 
